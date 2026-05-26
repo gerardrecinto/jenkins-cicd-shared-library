@@ -1,6 +1,6 @@
-![demo](docs/assets/demo2.gif)
-
 # groovylibrary
+
+![groovylibrary logo](docs/assets/logo.svg)
 
 Jenkins Shared Library for standardizing CI/CD across Python microservice teams. Used by 100+ engineers across 10 product lines in 5 global regions, replacing per-team Jenkinsfile sprawl with reusable steps that enforce consistent build, test, Docker, Kubernetes, and notification patterns.
 
@@ -10,6 +10,10 @@ Cut pipeline setup time by 80%. 68% of new WorkflowJob pipelines adopted it with
 ![Jenkins](https://img.shields.io/badge/Jenkins-Shared%20Library-D24939?logo=jenkins&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Deploy-Kubernetes-326CE5?logo=kubernetes&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
+
+![demo](docs/assets/demo.gif)
+
+Commercial angle and consulting hooks: [docs/go-to-market.md](docs/go-to-market.md).
 
 ---
 
