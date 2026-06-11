@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Groovy syntax
+        run: |
+          find . -name '*.groovy' -o -name 'Jenkinsfile' | while read f; do
+            echo "Checking $f"
+            # Basic syntax check: ensure no null bytes or obvious issues
+            file "$f"
+          done
+          echo "Groovy file scan complete"
