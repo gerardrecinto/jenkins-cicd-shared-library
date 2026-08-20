@@ -2,12 +2,38 @@ plugins {
     id 'groovy'
 }
 
+// Pin the toolchain the test compiler/runner actually use, independent of
+// whichever JDK happens to be launching the Gradle daemon on a given
+// machine. Without this, a newer local JDK (e.g. a Homebrew Gradle install
+// running on JDK 26) makes the compiler daemon read java.base class files
+// that groovy-all 3.0.19's bundled ASM can't parse, and compileTestGroovy
+// fails with "Unsupported class file major version 70". 18 is pinned
+// (rather than 17) because it's what's actually installed here; CI
+// provisions the same version explicitly.
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(18)
+    }
+}
+
 repositories {
     mavenCentral()
+    maven { url 'https://jitpack.io' }
+    // JenkinsPipelineUnit pulls com.cloudbees:groovy-cps at runtime, which
+    // is only published to the Jenkins project's own repo, not Central.
+    maven { url 'https://repo.jenkins-ci.org/public/' }
+}
+
+sourceSets {
+    test {
+        groovy {
+            srcDirs = ['test']
+        }
+    }
 }
 
 dependencies {
-    testImplementation 'com.lesfurets:jenkins-pipeline-unit:1.21'
+    testImplementation 'com.github.jenkinsci:JenkinsPipelineUnit:v1.21'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
     testImplementation 'org.codehaus.groovy:groovy-all:3.0.19'
 }
