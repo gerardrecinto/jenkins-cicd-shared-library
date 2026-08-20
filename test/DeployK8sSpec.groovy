@@ -12,8 +12,8 @@ class DeployK8sSpec extends BasePipelineTest {
     void setUp() {
         super.setUp()
         helper.registerAllowedMethod('sh', [Map.class], { args ->
-            if (args.returnStatus) return 0
             shCalls << args.script?.trim()
+            if (args.returnStatus) return 0
         })
         helper.registerAllowedMethod('sh', [String.class], { cmd ->
             shCalls << cmd.trim()
