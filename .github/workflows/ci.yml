@@ -19,3 +19,20 @@ jobs:
             file "$f"
           done
           echo "Groovy file scan complete"
+
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 18
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '18'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run test suite
+        run: gradle test --console=plain
