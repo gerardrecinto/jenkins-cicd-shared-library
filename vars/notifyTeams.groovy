@@ -1,5 +1,7 @@
 #!/usr/bin/env groovy
 
+import groovy.json.JsonOutput
+
 /**
  * notifyTeams
  *
@@ -34,36 +36,42 @@ def call(Map config = [:]) {
     def text    = customMsg ?: "${env.JOB_NAME} build #${env.BUILD_NUMBER} ${status.toLowerCase()} on branch ${env.GIT_BRANCH ?: 'unknown'}"
     def buildUrl = env.BUILD_URL ?: ''
 
-    // Teams Adaptive Card payload (Incoming Webhook format)
-    def payload = """{
-        "@type": "MessageCard",
-        "@context": "https://schema.org/extensions",
-        "themeColor": "${themeColor}",
-        "summary": "${title}",
-        "sections": [{
-            "activityTitle": "${title}",
-            "activityText": "${text}",
-            "facts": [
-                { "name": "Job",         "value": "${env.JOB_NAME}" },
-                { "name": "Build",       "value": "#${env.BUILD_NUMBER}" },
-                { "name": "Status",      "value": "${status}" },
-                { "name": "Branch",      "value": "${env.GIT_BRANCH ?: 'unknown'}" },
-                { "name": "Commit",      "value": "${env.GIT_COMMIT?.take(7) ?: 'unknown'}" }
+    // Teams Adaptive Card payload (Incoming Webhook format). Built as a real
+    // map and serialized with JsonOutput -- the old version string-
+    // interpolated the commit message and branch name straight into the
+    // JSON and then into a single-quoted shell string, so a quote in either
+    // one either broke the JSON or broke out of the shell quoting entirely.
+    def payload = JsonOutput.toJson([
+        '@type'   : 'MessageCard',
+        '@context': 'https://schema.org/extensions',
+        themeColor: themeColor,
+        summary   : title,
+        sections  : [[
+            activityTitle: title,
+            activityText : text,
+            facts        : [
+                [name: 'Job',    value: env.JOB_NAME],
+                [name: 'Build',  value: "#${env.BUILD_NUMBER}"],
+                [name: 'Status', value: status],
+                [name: 'Branch', value: env.GIT_BRANCH ?: 'unknown'],
+                [name: 'Commit', value: env.GIT_COMMIT?.take(7) ?: 'unknown']
             ],
-            "markdown": true
-        }],
-        "potentialAction": [{
-            "@type": "OpenUri",
-            "name": "View Build",
-            "targets": [{ "os": "default", "uri": "${buildUrl}" }]
-        }]
-    }"""
+            markdown     : true
+        ]],
+        potentialAction: [[
+            '@type' : 'OpenUri',
+            name    : 'View Build',
+            targets : [[os: 'default', uri: buildUrl]]
+        ]]
+    ])
 
     withCredentials([string(credentialsId: webhookCred, variable: 'TEAMS_WEBHOOK')]) {
-        sh """
-            curl -s -X POST "\$TEAMS_WEBHOOK" \
+        writeFile file: 'teams-payload.json', text: payload
+        sh '''
+            curl -s -X POST "$TEAMS_WEBHOOK" \
                 -H 'Content-Type: application/json' \
-                -d '${payload}'
-        """
+                -d @teams-payload.json
+        '''
+        sh 'rm -f teams-payload.json'
     }
 }

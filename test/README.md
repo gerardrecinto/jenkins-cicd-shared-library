@@ -19,22 +19,25 @@ BuildPythonSpec > testDefaultConfig() PASSED
 BuildPythonSpec > testCustomConfig() PASSED
 DeployK8sSpec > testDeployWithRolloutCheck() PASSED
 DeployK8sSpec > testDeployWithoutDeploymentName() PASSED
+NotifySlackSpec > testDefaultConfig() PASSED
+NotifySlackSpec > testMessageContainingQuotesAndApostrophesDoesNotBreakPayloadOrShellCommand() PASSED
+NotifyTeamsSpec > testDefaultConfig() PASSED
+NotifyTeamsSpec > testCustomMessageContainingQuotesDoesNotBreakPayloadOrShellCommand() PASSED
 
-4 tests completed, 0 failed
+8 tests completed, 0 failed
 ```
 
 ## Coverage
 
-Only two of the six `vars/` steps have actual spec files. The table below
-used to claim the other four were tested too; they aren't, and grepping
-`test/*.groovy` for their step names turns up nothing. Fixing that means
-writing the missing specs, not editing the table again.
+Four of the six `vars/` steps have actual spec files. `dockerBuildPush`
+and `llmAnalyzeFailure` still don't; fixing that means writing the
+missing specs, not editing this table.
 
 | Step | Tests |
 |---|---|
 | `buildPython` | default config, custom python version + coverage threshold |
 | `deployK8s` | named deployment with rollout check, unnamed deployment fallback |
+| `notifySlack` | default config posts via `-d @file`; a message with quotes/apostrophes round-trips through JSON and never reaches the shell command raw |
+| `notifyTeams` | default config posts via `-d @file`; a message with quotes round-trips through JSON and never reaches the shell command raw |
 | `dockerBuildPush` | not tested |
-| `notifySlack` | not tested |
-| `notifyTeams` | not tested |
 | `llmAnalyzeFailure` | not tested |
