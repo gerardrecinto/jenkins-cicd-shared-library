@@ -1,0 +1,60 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "vars/**", "test/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp site/index.html _site/
+          python3 - vars _site/steps.json <<'PY'
+          import glob, json, os, re, sys
+          src, out = sys.argv[1], sys.argv[2]
+          steps = []
+          for f in sorted(glob.glob(os.path.join(src, "*.groovy"))):
+              text = open(f).read()
+              params = []
+              for m in re.finditer(r"config\.get\('(\w+)'(?:,\s*([^)]+?))?\)", text):
+                  d = m.group(2)
+                  params.append({"key": m.group(1), "default": None if d is None else d.strip().strip("'")})
+              steps.append({"name": os.path.basename(f)[:-7], "params": params})
+          json.dump(steps, open(out, "w"), indent=1)
+          print(len(steps), "steps")
+          PY
+          python3 - test _site/tests.json <<'PY'
+          import glob, json, os, re, sys
+          src, out = sys.argv[1], sys.argv[2]
+          tests = []
+          for f in sorted(glob.glob(os.path.join(src, "*Spec.groovy"))):
+              for m in re.finditer(r"void (test\w+)\(", open(f).read()):
+                  tests.append({"file": os.path.basename(f)[:-12], "name": m.group(1), "doc": ""})
+          json.dump(tests, open(out, "w"), indent=1)
+          print(len(tests), "tests")
+          PY
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v5

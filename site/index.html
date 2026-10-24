@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jenkins-cicd-shared-library: reusable Jenkins steps</title>
+<meta name="description" content="Pick steps from a Jenkins shared library and generate a Jenkinsfile. Parameters and defaults are read from the real Groovy source on every deploy.">
+<meta property="og:title" content="jenkins-cicd-shared-library">
+<meta property="og:description" content="Pick steps from a Jenkins shared library and generate a Jenkinsfile. Parameters and defaults are read from the real Groovy source on every deploy.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ef4444'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23fff' stroke-width='3'/%3E%3C/svg%3E">
+<style>
+
+:root{--bg:#f8fafc;--panel:#fff;--panel2:#f1f5f9;--line:#e2e8f0;--fg:#0f172a;--mute:#475569;--brand:#b91c1c;--brand-bg:#fee2e2;--ok:#047857;--ok-bg:#d1fae5;--err:#b91c1c;--err-bg:#fee2e2;--code:#0b1220;--code-fg:#e2e8f0}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#070d1a;--panel:#0d1526;--panel2:#111c33;--line:#1e2b47;--fg:#e8eefc;--mute:#9fb0cc;--brand:#f87171;--brand-bg:#3b1212;--ok:#34d399;--ok-bg:#06382b;--err:#fca5a5;--err-bg:#3b1212}}
+:root[data-theme=dark]{--bg:#070d1a;--panel:#0d1526;--panel2:#111c33;--line:#1e2b47;--fg:#e8eefc;--mute:#9fb0cc;--brand:#f87171;--brand-bg:#3b1212;--ok:#34d399;--ok-bg:#06382b;--err:#fca5a5;--err-bg:#3b1212}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--brand)}
+code,pre,textarea,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+nav{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--fg);text-decoration:none}
+.logo i{width:22px;height:22px;border-radius:6px;background:#ef4444;display:inline-block}
+nav .links{display:flex;gap:18px;align-items:center;font-size:14px}
+nav .links a{color:var(--mute);text-decoration:none}
+nav .links a:hover{color:var(--fg)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:10px;font-weight:600;text-decoration:none;border:1px solid var(--line);color:var(--fg);background:var(--panel);cursor:pointer;font-size:15px}
+.btn.primary{background:#ef4444;border-color:#ef4444;color:#2b0505}
+.btn.primary:hover{background:#f87171}
+.btn:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #ef4444;outline-offset:2px}
+.hero{padding:72px 0 40px;text-align:center}
+.pill{display:inline-block;font-size:13px;color:var(--brand);background:var(--brand-bg);padding:4px 12px;border-radius:99px;margin-bottom:20px;font-weight:600}
+h1{font-size:clamp(34px,6vw,58px);line-height:1.08;margin:0 0 18px;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--brand)}
+.lede{max-width:700px;margin:0 auto 28px;color:var(--mute);font-size:18px}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.stats{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;margin-top:36px;color:var(--mute);font-size:14px}
+.stats b{display:block;color:var(--fg);font-size:22px}
+section{padding:56px 0}
+h2{font-size:clamp(26px,4vw,36px);margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--mute);margin:0 0 28px;max-width:720px}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.lab{grid-template-columns:minmax(0,1fr)}nav .links .hide-s{display:none}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.card h3{margin:0;padding:12px 16px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:600 12px system-ui;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);cursor:pointer;text-transform:none;letter-spacing:0}
+.chip[aria-pressed=true]{background:var(--brand-bg);border-color:var(--brand);color:var(--brand)}
+#log{display:block;width:100%;height:420px;border:0;padding:12px 14px;font-size:12.5px;line-height:1.55;background:var(--code);color:var(--code-fg);resize:vertical;white-space:pre;overflow:auto}
+.src{display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--mute);flex-wrap:wrap}
+.out{min-height:420px}
+.status{padding:16px;color:var(--mute);font-size:14px}
+.verdict{padding:18px 16px;border-bottom:1px solid var(--line);background:var(--err-bg)}
+.verdict.unknown{background:var(--panel2)}
+.verdict b{display:block;font-size:20px;text-transform:uppercase;letter-spacing:.04em;color:var(--err)}
+.verdict.unknown b{color:var(--mute)}
+.verdict span{font-size:14px;color:var(--mute)}
+.sec{padding:14px 16px;border-bottom:1px solid var(--line)}
+.sec:last-child{border-bottom:0}
+.sec h4{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.bar{height:10px;border-radius:99px;background:var(--panel2);overflow:hidden;max-width:260px;display:inline-block;vertical-align:middle;margin-right:10px;width:60%}
+.bar i{display:block;height:100%;background:#ef4444}
+.site{padding:8px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.site:last-child{border:0}
+.site code{background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:12px}
+.fix{background:var(--ok-bg);color:var(--ok);padding:10px 12px;border-radius:8px;font-size:14px}
+.note{font-size:13px;color:var(--mute);margin-top:12px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:860px){.steps{grid-template-columns:minmax(0,1fr)}}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+.step .n{width:28px;height:28px;border-radius:8px;background:var(--brand-bg);color:var(--brand);display:grid;place-items:center;font-weight:700;margin-bottom:10px}
+.step h3{margin:0 0 6px;font-size:17px}
+.step p{margin:0;color:var(--mute);font-size:15px}
+.tw{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow-x:auto;max-width:100%}
+table{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);background:var(--panel2)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-family:ui-monospace,monospace;font-weight:700;white-space:nowrap}
+.install pre{background:var(--code);color:var(--code-fg);padding:16px;border-radius:12px;overflow-x:auto;font-size:13.5px;margin:0 0 12px}
+.cols2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.cols2{grid-template-columns:minmax(0,1fr)}}
+.limits{background:var(--panel);border:1px solid var(--line);border-left:4px solid #f59e0b;border-radius:10px;padding:16px 20px}
+.limits ul{margin:8px 0 0;padding-left:20px;color:var(--mute)}
+footer{border-top:1px solid var(--line);padding:32px 0;color:var(--mute);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+.inc{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:16px 18px;min-width:0}
+.inc h3{margin:0 0 6px;font-size:16px}
+.inc p{margin:0 0 8px;color:var(--mute);font-size:14.5px}
+.inc pre{margin:8px 0 0;background:var(--code);color:var(--code-fg);padding:10px 12px;border-radius:8px;font-size:12px;overflow-x:auto}
+.incs{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+pre.term{margin:0;background:var(--code);color:var(--code-fg);padding:14px 16px;font-size:12.5px;line-height:1.55;overflow-x:auto;white-space:pre}
+.term .hl{color:#fbbf24}
+.term .ok{color:#34d399}
+.term .bad{color:#f87171}
+.term .dim{color:#64748b}
+.player{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--line);align-items:center}
+.cap{font-size:13px;color:var(--mute);padding:10px 16px;border-top:1px solid var(--line);min-height:44px}
+.sim{display:inline-block;font:700 11px ui-monospace,monospace;color:var(--brand);background:var(--brand-bg);padding:2px 8px;border-radius:6px}
+.real{display:inline-block;font:700 11px ui-monospace,monospace;color:var(--ok);background:var(--ok-bg);padding:2px 8px;border-radius:6px}
+.note code,.sub code,.cap code{overflow-wrap:anywhere}
+.tcat{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;padding:14px}
+.tcat div{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;background:var(--panel2);min-width:0}
+.tcat b{font-family:ui-monospace,monospace;font-size:12px;word-break:break-all;display:block}
+.tcat span{color:var(--mute)}
+.ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--line)}
+.ctrl label{font-size:13px;color:var(--mute)}
+.ctrl select,.ctrl input[type=number],.ctrl input[type=text]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px}
+.ctrl input[type=number]{width:72px}
+.bars{padding:14px 16px;display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:90px 1fr 56px;gap:8px;align-items:center;font:12px ui-monospace,monospace}
+.bar i{display:block;height:14px;border-radius:4px;background:var(--brand);min-width:2px}
+.bar i.zero{background:var(--err);opacity:.35;width:100%}
+.ta{display:block;width:100%;border:0;padding:12px 14px;font-size:12.5px;line-height:1.55;background:var(--code);color:var(--code-fg);resize:vertical;white-space:pre;overflow:auto;font-family:ui-monospace,monospace;height:150px}
+.lbl{display:block;padding:8px 14px;font-size:12px;color:var(--mute);background:var(--panel2);border-bottom:1px solid var(--line);border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="logo" href="#top"><i></i>jenkins-cicd-shared-library</a>
+  <div class="links"><a href="#try" class="hide-s">Try it</a><a href="#install" class="hide-s">Install</a><a class="btn" href="https://github.com/gerardrecinto/jenkins-cicd-shared-library">GitHub</a></div>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap">
+  <h1>Stop copying Jenkinsfiles. <em>Call a step.</em></h1>
+  <p class="lede">A Jenkins shared library for Python microservice teams: build and test with a coverage gate, Docker build and push, Kubernetes deploy with automatic rollback, Slack and Teams status, and LLM failure triage.</p>
+  <div class="cta"><a class="btn primary" href="#try">Build a pipeline</a><a class="btn" href="#install">Add to Jenkins</a></div>
+  <div class="stats"><div><b>6</b>reusable steps</div><div><b id="tc2">8</b>JenkinsPipelineUnit tests</div><div><b>0</b>builds run from this page</div></div>
+</div></header>
+
+
+<section id="try"><div class="wrap">
+  <h2>Assemble a pipeline from the library</h2>
+  <p class="sub">Pick the steps you want. The parameters and their defaults are read from the Groovy source on every deploy, so the form cannot drift from the code. The Jenkinsfile is generated for you to copy. <span class="sim">GENERATED, NOT RUN</span> Nothing here talks to Jenkins.</p>
+  <div class="lab">
+    <div class="card"><h3><span>Steps</span></h3>
+      <div class="ctrl" id="picks" role="group" aria-label="Steps"><span class="cnt">Loading the step list...</span></div>
+      <div id="forms" style="padding:0 0 8px"></div>
+    </div>
+    <div class="card"><h3><span>Jenkinsfile</span><span class="tools"><button class="chip" id="copy">Copy</button></span></h3>
+      <pre class="term" id="out" aria-live="polite" style="max-height:560px;overflow:auto"></pre>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Why a shared library</h2>
+  <p class="sub">Instead of every team copying and drifting its own Jenkinsfile, each concern is one step that every pipeline calls the same way.</p>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3>Build and test</h3><p><code>buildPython</code> installs dependencies, lints with flake8, runs pytest with coverage and fails the build when coverage drops below your threshold.</p></div>
+    <div class="step"><div class="n">2</div><h3>Ship</h3><p><code>dockerBuildPush</code> pushes the commit SHA and <code>latest</code> tags. <code>deployK8s</code> applies the manifests, watches the rollout and rolls back on timeout.</p></div>
+    <div class="step"><div class="n">3</div><h3>Tell people</h3><p><code>notifySlack</code> and <code>notifyTeams</code> post color-coded status. <code>llmAnalyzeFailure</code> sends the log tail to an OpenAI model and posts a root-cause guess to Slack.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Tests <span id="tcount" class="cnt"></span></h2>
+  <p class="sub">Read from the repo's JenkinsPipelineUnit specs on every deploy. Specs exist for buildPython, deployK8s, notifySlack and notifyTeams. dockerBuildPush and llmAnalyzeFailure have none yet.</p>
+  <div class="card"><div class="tcat" id="tcat"><div>Loading...</div></div></div>
+</div></section>
+
+<section id="install" class="install"><div class="wrap">
+  <h2>Add it to Jenkins</h2>
+  <p class="sub">Manage Jenkins, Configure System, Global Pipeline Libraries.</p>
+  <div class="tw"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody>
+    <tr><td>Name</td><td><code>groovylibrary</code></td></tr>
+    <tr><td>Default version</td><td><code>main</code></td></tr>
+    <tr><td>Retrieval method</td><td>Modern SCM (GitHub)</td></tr>
+    <tr><td>Repository</td><td><code>https://github.com/gerardrecinto/jenkins-cicd-shared-library</code></td></tr>
+  </tbody></table></div>
+  <p class="note">The README still uses the repo's old name, <code>groovylibrary</code>, in its URL. GitHub redirects it, but use the current name. Run the specs with <code>gradle test</code>.</p>
+</div></section>
+
+<section><div class="wrap">
+  <div class="limits"><strong>What this does not do</strong><ul>
+    <li>The page cannot run a Jenkins build. It generates a Jenkinsfile from the real step parameters.</li>
+    <li>The surrounding stages and the post blocks come from the README's example pipeline, not from the library itself.</li>
+    <li><code>llmAnalyzeFailure</code> calls the OpenAI chat completions API, needs a secret-text credential and <code>curl</code> on the agent, and its output is a guess to verify.</li>
+    <li>The repo has no Gradle wrapper checked in, so running the specs needs a local Gradle.</li>
+  </ul></div>
+</div></section>
+
+
+<footer><div class="wrap">
+  <span>jenkins-cicd-shared-library. Built by <a href="https://github.com/gerardrecinto">Gerard Recinto</a>.</span>
+  <span><a href="https://github.com/gerardrecinto/jenkins-cicd-shared-library">Source</a> &middot; <a href="https://github.com/gerardrecinto/jenkins-cicd-shared-library/releases">Releases</a></span>
+</div></footer>
+
+<script>
+
+(() => {
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const track = (n) => { try { if (window.plausible) window.plausible(n); } catch (e) {} };
+
+  function renderTests(el, countEl, tests) {
+    if (countEl) countEl.textContent = "(" + tests.length + ")"; if ($("tc2")) $("tc2").textContent = tests.length;
+    const by = {}; tests.forEach((t) => (by[t.file] = by[t.file] || []).push(t));
+    el.innerHTML = Object.entries(by).map(([f, ts]) => `<div><b>${esc(f)} (${ts.length})</b>${ts.map((t) => `<span>${esc(t.name.replace(/^test_/, "").replace(/_/g, " "))}</span><br>`).join("")}</div>`).join("");
+  }
+
+  const DESC = { buildPython: "Install, lint, test, enforce coverage", dockerBuildPush: "Build and push SHA and latest tags", deployK8s: "kubectl apply, watch rollout, roll back on timeout", notifySlack: "Color-coded Slack status", notifyTeams: "Color-coded Teams card", llmAnalyzeFailure: "Triage the failure with an LLM" };
+  const STAGE = { buildPython: "Build", dockerBuildPush: "Docker", deployK8s: "Deploy" };
+    let steps = [], on = new Set(["buildPython", "dockerBuildPush", "deployK8s", "notifySlack"]), val = {};
+  const lit = (k, v) => (/^-?\d+$/.test(v) || v === "true" || v === "false") ? v : "'" + String(v).replace(/'/g, "\\'") + "'";
+  function call(s, ind, status) {
+    const pad = " ".repeat(ind + 4);
+    const lines = s.params.map((p) => { const v = val[s.name + "." + p.key]; const d = p.default; if (v === undefined || v === "") return null; if (d !== null && String(v) === String(d)) return null; return pad + p.key + ": " + lit(p.key, v); }).filter(Boolean);
+    const all = (status ? [pad + "status: '" + status + "'"] : []).concat(lines);
+    return all.length ? `${s.name}(\n${all.join(",\n")}\n${" ".repeat(ind)})` : `${s.name}()`;
+  }
+  function gen() {
+    const by = (n) => steps.find((s) => s.name === n);
+    const stages = Object.keys(STAGE).filter((n) => on.has(n) && by(n)).map((n) => `        stage('${STAGE[n]}') {\n            steps {\n                ${call(by(n), 16)}\n            }\n        }`);
+    const notify = ["notifySlack", "notifyTeams"].filter((n) => on.has(n) && by(n));
+    const success = notify.map((n) => "            " + call(by(n), 12, "SUCCESS"));
+    const failure = [].concat(on.has("llmAnalyzeFailure") && by("llmAnalyzeFailure") ? ["            " + call(by("llmAnalyzeFailure"), 12)] : [], notify.map((n) => "            " + call(by(n), 12, "FAILURE")));
+    const blocks = [["success", success], ["failure", failure]].filter(([, c]) => c.length).map(([w, c]) => `        ${w} {\n${c.join("\n")}\n        }`);
+    $("out").textContent = `@Library('groovylibrary') _\n\npipeline {\n    agent any\n\n    stages {\n${stages.join("\n") || "        // pick a stage step on the left"}\n    }\n${blocks.length ? `\n    post {\n${blocks.join("\n")}\n    }\n` : ""}}\n`;
+  }
+  function forms() {
+    $("forms").innerHTML = steps.filter((s) => on.has(s.name) && s.params.length).map((s) => `<div class="sec"><h4>${esc(s.name)}</h4><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px">${s.params.map((p) => { const id = "p_" + s.name + "_" + p.key; const cur = val[s.name + "." + p.key] ?? (p.default ?? ""); return `<label style="font-size:12px;color:var(--mute)" for="${id}">${esc(p.key)}${p.default === null ? " (required)" : ""}<input id="${id}" data-k="${esc(s.name + "." + p.key)}" type="text" value="${esc(cur)}" style="display:block;width:100%;margin-top:3px;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px"></label>`; }).join("")}</div></div>`).join("");
+  }
+  function picks() {
+    $("picks").innerHTML = steps.map((s) => `<label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--fg)" title="${esc(DESC[s.name] || "")}"><input type="checkbox" value="${esc(s.name)}" ${on.has(s.name) ? "checked" : ""}> ${esc(s.name)}</label>`).join("");
+  }
+  $("picks").addEventListener("change", (e) => { e.target.checked ? on.add(e.target.value) : on.delete(e.target.value); forms(); gen(); track("jl_pick"); });
+  $("forms").addEventListener("input", (e) => { if (e.target.dataset.k) { val[e.target.dataset.k] = e.target.value; gen(); } });
+  $("copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText($("out").textContent); $("copy").textContent = "Copied"; setTimeout(() => ($("copy").textContent = "Copy"), 1500); } catch (e) { $("copy").textContent = "Select and copy"; } track("jl_copy"); });
+  fetch("tests.json").then((r) => r.json()).then((t) => renderTests($("tcat"), $("tcount"), t)).catch(() => { $("tcat").innerHTML = "<div>The test list did not load.</div>"; });
+  fetch("steps.json").then((r) => r.json()).then((s) => {
+    const order = ["buildPython", "dockerBuildPush", "deployK8s", "notifySlack", "notifyTeams", "llmAnalyzeFailure"];
+    steps = s.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+    val["dockerBuildPush.imageName"] = "my-service"; val["dockerBuildPush.registry"] = "registry.example.com"; val["deployK8s.deploymentName"] = "my-service";
+    picks(); forms(); gen(); window.__JL_READY__ = true;
+  }).catch(() => { $("picks").textContent = "The step list did not load."; });
+})();
+
+</script>
+</body>
+</html>
